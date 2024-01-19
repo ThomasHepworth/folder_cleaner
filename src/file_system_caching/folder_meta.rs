@@ -15,6 +15,7 @@ pub struct Folder {
 }
 
 impl Folder {
+    // TODO: Handle any errors properly...
     pub fn new(path: PathBuf) -> Folder {
         let (subfolders, total_size) = match Folder::scan_folder_metadata(&path) {
             Ok(result) => result,
@@ -40,16 +41,23 @@ impl Folder {
             if path.is_dir() {
                 subfolders.push(path);
             } else {
-                if let Ok(metadata) = fs::metadata(&path) {
-                    total_size += metadata.len();
-                }
+                let metadata = get_metadata_or_panic(&path);
+                total_size += metadata.len();
             }
         }
 
         Ok((subfolders, total_size))
     }
 
-    pub fn update_folder(&mut self) -> io::Result<()> {
+    fn scan_and_update_folder_metadata(&mut self) -> io::Result<()> {
+        let (subfolders, total_size) = Folder::scan_folder_metadata(&self.path)?;
+        self.subfolders = subfolders;
+        self.folder_size = total_size;
+        self.record_last_updated = Utc::now();
+        Ok(())
+    }
+
+    pub fn update_folder_if_outdated(&mut self) -> io::Result<&Self> {
         let metadata = fs::metadata(&self.path)?;
 
         if let Ok(last_modified) = metadata.modified() {
@@ -61,25 +69,27 @@ impl Folder {
                     self.path.display(),
                     last_modified_utc
                 );
-
-                match Folder::scan_folder_metadata(&self.path) {
-                    // Update our metadata with the latest information
-                    Ok((subfolders, total_size)) => {
-                        self.subfolders = subfolders;
-                        self.folder_size = total_size;
-                        self.record_last_updated = Utc::now();
-                    }
-                    Err(e) => {
-                        panic!("Error scanning folder: {}", e);
-                    }
-                }
+                self.scan_and_update_folder_metadata()?;
             }
         }
 
-        Ok(())
+        Ok(self) // Return the current instance
     }
 }
 
+// TODO: Move to helper module
+// Also, handle this error properly - report it as unknown to the user
+fn get_metadata_or_panic(path: &PathBuf) -> fs::Metadata {
+    match fs::metadata(&path) {
+        Ok(metadata) => metadata,
+        Err(e) => {
+            eprintln!("Error scanning folder: {}", e);
+            panic!("Failed to retrieve metadata for {:?}", path);
+        }
+    }
+}
+
+// TODO: Implement `to_folder` for `PathBuf`
 pub fn crawl_folders_for_metadata(
     folder_hash_map: &mut HashMap<String, Folder>,
     root_folder: &PathBuf,
@@ -87,31 +97,34 @@ pub fn crawl_folders_for_metadata(
 ) -> io::Result<()> {
     check_root_folder_exists(root_folder);
 
+    let mut folder_stack: VecDeque<(String, u16)> = VecDeque::new();
+    // Set our starting folder
     let folder_name: String = root_folder.to_string_lossy().to_string();
-    update_folder_hashmap(folder_hash_map, &folder_name)?;
+    folder_stack.push_front((folder_name, 0));
 
-    if crawl_subfolders {
-        recursively_crawl_subfolders(folder_hash_map, &folder_name)?;
-    }
-
-    Ok(())
+    process_folder_stack(folder_hash_map, &mut folder_stack, crawl_subfolders)
 }
 
-fn recursively_crawl_subfolders(
+fn process_folder_stack(
     folder_hash_map: &mut HashMap<String, Folder>,
-    root_folder_name: &String,
+    folder_stack: &mut VecDeque<(String, u16)>,
+    crawl_subfolders: bool,
 ) -> io::Result<()> {
-    // Recursively crawl any subfolders found in the root folder
-    match folder_hash_map.get(root_folder_name) {
-        Some(folder) => {
-            // Clone the paths to avoid borrowing issues
-            let subfolder_paths = folder.subfolders.clone();
-            for subfolder_path in subfolder_paths {
-                crawl_folders_for_metadata(folder_hash_map, &subfolder_path, true)?;
+    while let Some((folder_name, depth)) = folder_stack.pop_front() {
+        println!("Folder: {} has depth: {}", folder_name, depth);
+        update_folder_hashmap(folder_hash_map, &folder_name)?;
+
+        // Check for subfolders to add to the stack (if we are crawling)
+        if crawl_subfolders {
+            if let Some(folder) = folder_hash_map.get(&folder_name) {
+                let subfolder_paths = folder.subfolders.clone();
+                for subfolder_path in subfolder_paths {
+                    let subfolder_name = subfolder_path.to_string_lossy().to_string();
+                    folder_stack.push_front((subfolder_name, depth + 1));
+                }
             }
         }
-        None => (), // No subfolders - bottom of our recursion
-    };
+    }
 
     Ok(())
 }
@@ -126,22 +139,16 @@ fn check_root_folder_exists(root_folder: &PathBuf) {
 
 fn update_folder_hashmap(
     folder_hash_map: &mut HashMap<String, Folder>,
-    folder_path_str: &String,
+    folder_path_str: &str,
 ) -> io::Result<()> {
-    // Convert the String to a PathBuf
-    let folder_path = PathBuf::from(folder_path_str);
-
-    // Check if the folder exists in the map
-    if folder_hash_map.contains_key(folder_path_str) {
-        // If it exists, update the folder
-        folder_hash_map
-            .get_mut(folder_path_str)
-            .unwrap()
-            .update_folder()?;
-    } else {
-        // If it doesn't exist, create a new Folder and add it to the map
-        let new_folder = Folder::new(folder_path.clone());
-        folder_hash_map.insert(folder_path_str.clone(), new_folder);
+    match folder_hash_map.entry(folder_path_str.to_string()) {
+        std::collections::hash_map::Entry::Occupied(mut mapping) => {
+            mapping.get_mut().update_folder_if_outdated()?;
+        }
+        std::collections::hash_map::Entry::Vacant(mapping) => {
+            let new_folder = Folder::new(PathBuf::from(folder_path_str));
+            mapping.insert(new_folder);
+        }
     }
 
     Ok(())
