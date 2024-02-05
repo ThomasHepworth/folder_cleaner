@@ -1,16 +1,20 @@
 use chrono::{DateTime, Utc};
 use core::panic;
 // TODO: Import a faster hmap implementation
+use itertools::Itertools;
 use std::collections::{HashMap, VecDeque};
+use std::ffi::OsString;
 use std::fs::{self};
 use std::io;
 use std::path::PathBuf;
+
+use crate::logging::folder_tree::{process_folder_tree_stack, FileSystemLeaf, FileSystemStack};
 
 #[derive(Clone, Debug)]
 pub struct Folder {
     path: PathBuf,
     record_last_updated: DateTime<Utc>,
-    subfolders: Vec<PathBuf>,
+    subfolders: Vec<OsString>,
     folder_size: u64,
 }
 
@@ -30,7 +34,7 @@ impl Folder {
         }
     }
 
-    fn scan_folder_metadata(path: &PathBuf) -> io::Result<(Vec<PathBuf>, u64)> {
+    fn scan_folder_metadata(path: &PathBuf) -> io::Result<(Vec<OsString>, u64)> {
         let mut subfolders = Vec::new();
         let mut total_size = 0u64;
 
@@ -39,8 +43,9 @@ impl Folder {
             let path = entry.path();
 
             if path.is_dir() {
-                subfolders.push(path);
+                subfolders.push(entry.file_name());
             } else {
+                // Find the size of a file and add this to the total size
                 let metadata = get_metadata_or_panic(&path);
                 total_size += metadata.len();
             }
@@ -75,6 +80,17 @@ impl Folder {
 
         Ok(self) // Return the current instance
     }
+
+    pub fn get_subfolder_full_paths(&self) -> Vec<String> {
+        // Get the full file path of all subfolders
+        self.subfolders
+            .iter()
+            .map(|subfolder_name| self.path.join(subfolder_name))
+            .filter_map(|path| path.to_str().map(String::from))
+            .sorted() // Sort the paths
+            .rev() // Reverse the order
+            .collect() // Collect into a Vec<String>
+    }
 }
 
 // TODO: Move to helper module
@@ -97,36 +113,53 @@ pub fn crawl_folders_for_metadata(
 ) -> io::Result<()> {
     check_root_folder_exists(root_folder);
 
-    let mut folder_stack: VecDeque<(String, u16)> = VecDeque::new();
-    // Set our starting folder
-    let folder_name: String = root_folder.to_string_lossy().to_string();
-    folder_stack.push_front((folder_name, 0));
+    let folder_path = root_folder.to_string_lossy().to_string();
+    let dir_tree_stack = process_folder_stack(folder_hash_map, folder_path, crawl_subfolders)?;
 
-    process_folder_stack(folder_hash_map, &mut folder_stack, crawl_subfolders)
+    // print folder tree here...
+    let dir_tree = process_folder_tree_stack(dir_tree_stack);
+    println!("\n{}", dir_tree);
+    Ok(())
 }
 
 fn process_folder_stack(
     folder_hash_map: &mut HashMap<String, Folder>,
-    folder_stack: &mut VecDeque<(String, u16)>,
+    root_folder_path: String,
     crawl_subfolders: bool,
-) -> io::Result<()> {
-    while let Some((folder_name, depth)) = folder_stack.pop_front() {
-        println!("Folder: {} has depth: {}", folder_name, depth);
-        update_folder_hashmap(folder_hash_map, &folder_name)?;
+) -> io::Result<FileSystemStack> {
+    let mut dir_tree_stack: FileSystemStack = VecDeque::new();
+    let mut folder_stack: FileSystemStack = VecDeque::new();
 
-        // Check for subfolders to add to the stack (if we are crawling)
-        if crawl_subfolders {
-            if let Some(folder) = folder_hash_map.get(&folder_name) {
-                let subfolder_paths = folder.subfolders.clone();
-                for subfolder_path in subfolder_paths {
-                    let subfolder_name = subfolder_path.to_string_lossy().to_string();
-                    folder_stack.push_front((subfolder_name, depth + 1));
-                }
+    folder_stack.push_front(FileSystemLeaf {
+        key: root_folder_path,
+        depth: 0,
+        is_last: true,
+    });
+
+    while let Some(current_leaf) = folder_stack.pop_front() {
+        update_folder_hashmap(folder_hash_map, &current_leaf.key)?;
+
+        if let Some(folder) = folder_hash_map.get(&current_leaf.key) {
+            if crawl_subfolders {
+                folder
+                    .get_subfolder_full_paths()
+                    .into_iter()
+                    .enumerate()
+                    .for_each(|(index, subfolder_path)| {
+                        folder_stack.push_front(FileSystemLeaf {
+                            key: subfolder_path,
+                            depth: current_leaf.depth + 1,
+                            is_last: index == 0,
+                        });
+                    });
             }
         }
+
+        // Move current_leaf directly to dir_tree_stack
+        dir_tree_stack.push_back(current_leaf);
     }
 
-    Ok(())
+    Ok(dir_tree_stack)
 }
 
 // TODO: Move to error handling module...
@@ -141,7 +174,9 @@ fn update_folder_hashmap(
     folder_hash_map: &mut HashMap<String, Folder>,
     folder_path_str: &str,
 ) -> io::Result<()> {
-    match folder_hash_map.entry(folder_path_str.to_string()) {
+    println!("Updating folder: {}", folder_path_str);
+
+    match folder_hash_map.entry(folder_path_str.to_owned()) {
         std::collections::hash_map::Entry::Occupied(mut mapping) => {
             mapping.get_mut().update_folder_if_outdated()?;
         }
