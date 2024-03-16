@@ -1,4 +1,4 @@
-use crate::configs::config::{DisplayUnit, PathConfig, SizeConfig};
+use crate::configs::config::{DataSizeUnit, PathConfig, SizeConfig};
 
 use std::collections::HashMap;
 use std::fs;
@@ -83,7 +83,7 @@ fn print_group_folder_sizes(
     group_name: &str,
     total_size: u64,
     folder_sizes: &[(String, u64)],
-    unit: &DisplayUnit,
+    unit: &DataSizeUnit,
 ) {
     let title = format!(
         "Total size of group '{}': {}",
