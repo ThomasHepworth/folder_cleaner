@@ -5,6 +5,8 @@ pub enum ConfigError {
     UserDirNotFound,
     ReadError(PathBuf),
     ParseError(PathBuf, Box<dyn std::error::Error>),
+    ConfigNotFound(String),
+    FolderMapEmpty(String),
 }
 
 impl ConfigError {
@@ -22,14 +24,18 @@ impl std::fmt::Display for ConfigError {
         match self {
             ConfigError::UserDirNotFound => write!(f, "User directory not found."),
             ConfigError::ReadError(path) => {
-                write!(f, "Failed to read config file at '{}'", path.display())
+                write!(f, "Failed to read config file at '{}'.", path.display())
             }
             ConfigError::ParseError(path, err) => write!(
                 f,
-                "Failed to parse config file at '{}': {}",
+                "Failed to parse config file at '{}': {}.",
                 path.display(),
                 err
             ),
+            ConfigError::ConfigNotFound(detail) => {
+                write!(f, "Configuration not found: {}.", detail)
+            }
+            ConfigError::FolderMapEmpty(detail) => write!(f, "Folder map is empty: {}.", detail),
         }
     }
 }
