@@ -48,13 +48,33 @@ impl DataSizeUnit {
     }
 }
 
-fn deserialize_data_size_unit<'de, D>(deserializer: D) -> Result<DataSizeUnit, D::Error>
+fn deserialise_data_size_unit<'de, D>(deserializer: D) -> Result<DataSizeUnit, D::Error>
 // TODO: Migrate to deserialise
 where
     D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
     s.parse().map_err(serde::de::Error::custom)
+}
+
+// TODO: Improve deserialisation of extensions
+// Test - extensions_to_del = ["tmp", ".log", "..rs"]
+fn deserialise_extensions<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let optional_extensions: Option<Vec<String>> = Option::deserialize(deserializer)?;
+
+    match optional_extensions {
+        None => return Ok(None),
+        Some(vec) => {
+            let cleaned_vec: Vec<String> = vec
+                .into_iter()
+                .map(|s| s.trim_start_matches('.').to_string())
+                .collect();
+            Ok(Some(cleaned_vec))
+        }
+    }
 }
 
 // Config struct holds to data from the `[config]` section.
@@ -84,7 +104,7 @@ impl Default for SizeConfig {
 pub struct SizeConfig {
     // All values are optional. If size is provided,
     // defaults will be automatically set.
-    #[serde(deserialize_with = "deserialize_data_size_unit")]
+    #[serde(deserialize_with = "deserialise_data_size_unit")]
     pub display: DataSizeUnit,
     pub ignore_extensions: bool,
     pub walk: bool,

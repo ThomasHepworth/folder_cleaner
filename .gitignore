@@ -1,1 +1,31 @@
-/target
+# Compiled files
+/target/
+
+# Backup files
+*.bak
+
+# Ignore .env files as they usually contain sensitive information
+.env
+
+# Ignore .DS_Store on macOS
+.DS_Store
+
+# Ignore temporary files
+*.tmp
+*~
+
+# Editor directories and files
+.idea/
+*.swp
+*.swo
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Ignore all log files and temp files.
+*.log
+*.tmp
+
+# Cargo.lock file for libraries
+# Uncomment the following line if this is a library project
+# Cargo.lock
