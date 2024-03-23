@@ -6,8 +6,8 @@ use std::str::FromStr;
 
 pub type PathConfigMap = HashMap<String, Vec<PathConfig>>;
 
-#[derive(Deserialize, Debug)]
-pub enum DisplayUnit {
+#[derive(Deserialize, Debug, Clone)]
+pub enum DataSizeUnit {
     Bytes,
     KB, // Kilobytes
     MB, // Megabytes
@@ -15,16 +15,16 @@ pub enum DisplayUnit {
     TB, // Terabytes
 }
 
-impl FromStr for DisplayUnit {
+impl FromStr for DataSizeUnit {
     type Err = String;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input.to_uppercase().as_str() {
-            "BYTES" => Ok(DisplayUnit::Bytes),
-            "KB" => Ok(DisplayUnit::KB),
-            "MB" => Ok(DisplayUnit::MB),
-            "GB" => Ok(DisplayUnit::GB),
-            "TB" => Ok(DisplayUnit::TB),
+            "BYTES" => Ok(DataSizeUnit::Bytes),
+            "KB" => Ok(DataSizeUnit::KB),
+            "MB" => Ok(DataSizeUnit::MB),
+            "GB" => Ok(DataSizeUnit::GB),
+            "TB" => Ok(DataSizeUnit::TB),
             _ => panic!(
                 "Invalid display unit: '{}'. Valid units are: bytes, KB, MB, GB, TB.",
                 input
@@ -33,14 +33,14 @@ impl FromStr for DisplayUnit {
     }
 }
 
-impl DisplayUnit {
+impl DataSizeUnit {
     pub fn display_total_size(&self, bytes: u64) -> String {
         match self {
-            DisplayUnit::Bytes => format!("{} bytes", bytes),
-            DisplayUnit::KB => format!("{:.2} KB", bytes as f64 / 1024.0),
-            DisplayUnit::MB => format!("{:.2} MB", bytes as f64 / (1024.0 * 1024.0)),
-            DisplayUnit::GB => format!("{:.2} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0)),
-            DisplayUnit::TB => format!(
+            DataSizeUnit::Bytes => format!("{} bytes", bytes),
+            DataSizeUnit::KB => format!("{:.2} KB", bytes as f64 / 1024.0),
+            DataSizeUnit::MB => format!("{:.2} MB", bytes as f64 / (1024.0 * 1024.0)),
+            DataSizeUnit::GB => format!("{:.2} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0)),
+            DataSizeUnit::TB => format!(
                 "{:.2} TB",
                 bytes as f64 / (1024.0 * 1024.0 * 1024.0 * 1024.0)
             ),
@@ -48,7 +48,8 @@ impl DisplayUnit {
     }
 }
 
-fn deserialize_display_unit<'de, D>(deserializer: D) -> Result<DisplayUnit, D::Error>
+fn deserialize_data_size_unit<'de, D>(deserializer: D) -> Result<DataSizeUnit, D::Error>
+// TODO: Migrate to deserialise
 where
     D: Deserializer<'de>,
 {
@@ -70,7 +71,7 @@ impl Default for SizeConfig {
     // if the user doesn't provide one.
     fn default() -> Self {
         SizeConfig {
-            display: DisplayUnit::MB, // Default to Megabytes
+            display: DataSizeUnit::MB, // Default to Megabytes
             ignore_extensions: false,
             walk: false,
             skip_hidden: false,
@@ -83,8 +84,8 @@ impl Default for SizeConfig {
 pub struct SizeConfig {
     // All values are optional. If size is provided,
     // defaults will be automatically set.
-    #[serde(deserialize_with = "deserialize_display_unit")]
-    pub display: DisplayUnit,
+    #[serde(deserialize_with = "deserialize_data_size_unit")]
+    pub display: DataSizeUnit,
     pub ignore_extensions: bool,
     pub walk: bool,
     pub skip_hidden: bool,

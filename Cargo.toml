@@ -1,15 +1,10 @@
 [package]
-name = "folder_cleaner"
+name = "folder-cleaner"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-# [[bin]]
-# name = "config"
-# path = "src/configs.rs"
-
 [dependencies]
-directories = "3.0.2"
+directories = "4.0.1"
 toml = "0.5.2"
 serde = "1.0.136"
 serde_derive = "1.0.136"
