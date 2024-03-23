@@ -58,7 +58,7 @@ mod tests {
 
     // Generic function that creates a temporary TOML file, writes contents to it,
     // and then applies a provided function to the file. It returns the result of that function.
-    fn create_temp_toml_file_and_map<F, T>(contents: &str, action: F) -> (T, String)
+    fn create_temp_toml_file_and_map<F, T>(contents: &str, action: F) -> T
     where
         F: FnOnce(PathBuf) -> T,
     {
@@ -71,9 +71,7 @@ mod tests {
         writeln!(file, "{}", contents)
             .unwrap_or_else(|_| panic!("Failed to write to temporary file"));
 
-        let result = action(file_path.clone());
-
-        (result, contents.to_string())
+        action(file_path.clone())
     }
 
     #[test]
@@ -93,6 +91,9 @@ mod tests {
 
         let (_, subgroups) = parse_config_from_str(toml_str).unwrap();
         let subgroups = subgroups.unwrap();
+        assert_eq!(subgroups.len(), 2);
+
+        // Check the downloads group
         assert_eq!(
             subgroups.get("downloads").unwrap()[0].directory,
             PathBuf::from("/example/downloads")
@@ -108,7 +109,7 @@ mod tests {
             .extensions_to_keep
             .is_none());
 
-        // For "documents" subgroup, check extensions_to_keep instead of extensions_to_del
+        // Check the documents group
         assert_eq!(
             subgroups.get("documents").unwrap()[0]
                 .extensions_to_keep
@@ -168,12 +169,30 @@ mod tests {
             directory = "/example/path"
         "#; // This TOML string is intentionally invalid
 
-        let (result, _) = create_temp_toml_file_and_map(invalid_toml, |file_path| {
+        let result = create_temp_toml_file_and_map(invalid_toml, |file_path| {
             extract_user_config_from_path(&file_path)
         });
 
         match result {
             Err(ConfigError::ParseError(_, _)) => (), // Test passes, this is expected
+            _ => panic!("Test failed, unexpected result: {:#?}", result),
+        }
+    }
+
+    #[test]
+    fn test_config_file_read() {
+        let toml_test_str = r#"
+            [[path]]
+            directory = "/example/path"
+        "#;
+
+        let result =
+            create_temp_toml_file_and_map(toml_test_str, |file_path| read_config_file(&file_path));
+
+        match result {
+            Ok(contents) => {
+                assert_eq!(contents.trim(), toml_test_str.trim());
+            }
             _ => panic!("Test failed, unexpected result: {:#?}", result),
         }
     }
