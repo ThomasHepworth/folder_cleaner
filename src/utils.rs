@@ -17,3 +17,43 @@ pub fn join_path_conditionally(base: &str, key: &str) -> String {
         PathBuf::from(base).join(key).to_string_lossy().into_owned()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_join_path_conditionally_empty_base() {
+        let base = "";
+        let key = "folder";
+        assert_eq!(join_path_conditionally(base, key), "folder");
+    }
+
+    #[test]
+    fn test_join_path_conditionally_non_empty_base() {
+        let base = "/path/to";
+        let key = "folder";
+        assert_eq!(join_path_conditionally(base, key), "/path/to/folder");
+    }
+
+    #[test]
+    fn test_join_path_conditionally_root_base() {
+        let base = "/";
+        let key = "folder";
+        assert_eq!(join_path_conditionally(base, key), "/folder");
+    }
+
+    #[test]
+    fn test_join_path_conditionally_complex_key() {
+        let base = "/path/to";
+        let key = "nested/folder";
+        assert_eq!(join_path_conditionally(base, key), "/path/to/nested/folder");
+    }
+
+    #[test]
+    fn test_join_path_conditionally_trailing_slash_base() {
+        let base = "/path/to/";
+        let key = "folder";
+        assert_eq!(join_path_conditionally(base, key), "/path/to/folder");
+    }
+}
