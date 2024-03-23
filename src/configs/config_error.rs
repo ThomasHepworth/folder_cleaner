@@ -1,3 +1,4 @@
+// TODO: Add an additional error message detailing how to update the config file, where appropriate
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -5,7 +6,7 @@ pub enum ConfigError {
     UserDirNotFound,
     ReadError(PathBuf),
     ParseError(PathBuf, Box<dyn std::error::Error>),
-    ConfigNotFound(String),
+    ConfigNotFound(PathBuf),
     FolderMapEmpty(String),
 }
 
@@ -32,10 +33,16 @@ impl std::fmt::Display for ConfigError {
                 path.display(),
                 err
             ),
-            ConfigError::ConfigNotFound(detail) => {
-                write!(f, "Configuration not found: {}.", detail)
+            ConfigError::ConfigNotFound(path) => {
+                write!(f, "Configuration not found at path: {}", path.display())
             }
-            ConfigError::FolderMapEmpty(detail) => write!(f, "Folder map is empty: {}.", detail),
+            ConfigError::FolderMapEmpty(subgroup) => {
+                write!(
+                    f,
+                    "The subgroup '{}' was not found in your config file.",
+                    subgroup
+                )
+            }
         }
     }
 }
