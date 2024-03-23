@@ -1,7 +1,7 @@
 use super::folder_tree_helpers::{
     DirTreeLeaf, DirTreeOptions, FileSystemStack, FileSystemStackWithPath, TreeSuffix,
 };
-use crate::file_system_caching::folder_meta::{Folder, SortKey};
+use crate::file_system_caching::folder_meta::Folder;
 use crate::utils::join_path_conditionally;
 use std::collections::{HashMap, VecDeque}; // Add missing import for the `utils` module
 
