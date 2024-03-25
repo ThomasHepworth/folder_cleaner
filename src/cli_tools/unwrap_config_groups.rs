@@ -42,17 +42,6 @@ pub fn fetch_cli_configs(
     Ok((size_config, folder_configs))
 }
 
-// pub fn load_cli_configs_or_exit(filter_group: Option<&str>) -> (SizeConfig, Vec<PathConfig>) {
-//     let configs = fetch_cli_configs(filter_group);
-//     match configs {
-//         Ok((size, folder_configs)) => (size, folder_configs),
-//         Err(e) => {
-//             eprintln!("Error loading CLI configurations: {}", e);
-//             exit(1);
-//         }
-//     }
-// }
-
 #[cfg(test)]
 mod tests {
     use super::*;
