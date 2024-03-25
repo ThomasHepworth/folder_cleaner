@@ -4,7 +4,6 @@ pub mod parsing;
 
 use config_error::ConfigError;
 use directories::UserDirs;
-use parsing::extract_user_config_from_path;
 use std::path::PathBuf;
 
 pub const CONFIG_FILE_NAME: &str = ".nuke.toml";
