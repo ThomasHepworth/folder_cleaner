@@ -54,13 +54,6 @@ pub enum TreeKey {
 }
 
 impl TreeKey {
-    pub fn as_string(&self) -> String {
-        match self {
-            TreeKey::StringKey(s) => s.clone(),
-            TreeKey::PathKey(p) => p.to_string_lossy().to_string(),
-        }
-    }
-
     pub fn as_path(&self) -> PathBuf {
         match self {
             TreeKey::StringKey(s) => PathBuf::from(s),
