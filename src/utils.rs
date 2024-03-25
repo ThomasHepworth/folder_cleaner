@@ -1,59 +1,29 @@
+use core::panic;
+use std::fs;
 use std::path::PathBuf;
 
-/// Joins a base path with a key, handling cases where the base path may be empty.
-///
-/// # Arguments
-///
-/// * `path` - A string slice that holds the base path.
-/// * `key` - A string slice that holds the key to be appended to the path.
-///
-/// # Returns
-///
-/// A `String` that represents the joined path.
-pub fn join_path_conditionally(base: &str, key: &str) -> String {
-    if base.is_empty() {
-        key.to_string()
-    } else {
-        PathBuf::from(base).join(key).to_string_lossy().into_owned()
+pub fn check_root_folder_exists(root_folder: &str) {
+    let root = PathBuf::from(root_folder);
+
+    // Check if root_folder exists, panic if it doesn't
+    if !root.exists() {
+        panic!("Invalid root folder: {:?}", root_folder);
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_join_path_conditionally_empty_base() {
-        let base = "";
-        let key = "folder";
-        assert_eq!(join_path_conditionally(base, key), "folder");
+pub fn get_metadata_or_panic(path: &PathBuf) -> fs::Metadata {
+    match fs::metadata(&path) {
+        Ok(metadata) => metadata,
+        Err(e) => {
+            eprintln!("Error scanning folder: {}", e);
+            panic!("Failed to retrieve metadata for {:?}", path);
+        }
     }
+}
 
-    #[test]
-    fn test_join_path_conditionally_non_empty_base() {
-        let base = "/path/to";
-        let key = "folder";
-        assert_eq!(join_path_conditionally(base, key), "/path/to/folder");
-    }
-
-    #[test]
-    fn test_join_path_conditionally_root_base() {
-        let base = "/";
-        let key = "folder";
-        assert_eq!(join_path_conditionally(base, key), "/folder");
-    }
-
-    #[test]
-    fn test_join_path_conditionally_complex_key() {
-        let base = "/path/to";
-        let key = "nested/folder";
-        assert_eq!(join_path_conditionally(base, key), "/path/to/nested/folder");
-    }
-
-    #[test]
-    fn test_join_path_conditionally_trailing_slash_base() {
-        let base = "/path/to/";
-        let key = "folder";
-        assert_eq!(join_path_conditionally(base, key), "/path/to/folder");
-    }
+pub fn is_hidden_file(path: &PathBuf) -> bool {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .map(|s| s.starts_with('.'))
+        .unwrap_or(false)
 }
