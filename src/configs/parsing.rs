@@ -100,7 +100,7 @@ mod tests {
         );
         assert_eq!(
             subgroups.get("downloads").unwrap()[0]
-                .extensions_to_del
+                .extensions_to_delete
                 .as_ref()
                 .unwrap(),
             &vec!["tmp".to_string(), "log".to_string(), "rs".to_string()]
@@ -153,7 +153,7 @@ mod tests {
             "Directory should match"
         );
         assert!(
-            images_config.extensions_to_del.is_none(),
+            images_config.extensions_to_delete.is_none(),
             "extensions_to_del should be None"
         );
         assert!(

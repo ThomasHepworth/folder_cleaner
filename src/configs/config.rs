@@ -114,6 +114,6 @@ pub struct SizeConfig {
 #[derive(Deserialize, Debug)]
 pub struct PathConfig {
     pub directory: PathBuf,
-    pub extensions_to_del: Option<Vec<String>>,
+    pub extensions_to_delete: Option<Vec<String>>,
     pub extensions_to_keep: Option<Vec<String>>,
 }
