@@ -1,8 +1,7 @@
-use super::folder_tree_helpers::{DirTreeLeaf, DirTreeOptions, TreeKey};
+use super::folder_tree_helpers::{DirTreeLeaf, DirTreeOptions};
 use std::collections::VecDeque;
 
 pub type FileSystemStack = VecDeque<DirTreeLeaf>;
-pub type FileSystemStackWithPath = VecDeque<(String, DirTreeLeaf)>;
 
 struct DirTreeLimbs;
 
