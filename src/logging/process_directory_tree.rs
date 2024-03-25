@@ -1,9 +1,8 @@
-use super::folder_tree_helpers::{
-    DirTreeLeaf, DirTreeOptions, FileSystemStack, FileSystemStackWithPath, TreeSuffix,
-};
-use crate::file_system_caching::folder_meta::Folder;
-use crate::utils::join_path_conditionally;
-use std::collections::{HashMap, VecDeque}; // Add missing import for the `utils` module
+use super::folder_tree_helpers::{DirTreeLeaf, DirTreeOptions, TreeKey};
+use std::collections::VecDeque;
+
+pub type FileSystemStack = VecDeque<DirTreeLeaf>;
+pub type FileSystemStackWithPath = VecDeque<(String, DirTreeLeaf)>;
 
 struct DirTreeLimbs;
 
@@ -31,122 +30,54 @@ impl DirTreeLimbs {
             (_, false) => Self::BRANCH,
         }
     }
+
+    fn get_pointer_and_prefix(depth: usize, is_last: bool) -> (&'static str, &'static str) {
+        (
+            Self::get_pointer(depth, is_last),
+            Self::get_prefix(depth, is_last),
+        )
+    }
 }
 
 fn get_single_tree_leaf(
     leaf: DirTreeLeaf,
     prefix_stack: &mut Vec<&str>,
-    tree_suffix: Option<TreeSuffix>,
+    tree_suffix: String,
 ) -> String {
     // Our prefix stack is a vector of spaces and branches.
     // If our stack is longer than the depth, we want to remove
     // it indicates that we've gone up a directory. See the test at
     // bottom of the page for a visual representation of this.
     prefix_stack.truncate(leaf.depth);
-    let pointer = DirTreeLimbs::get_pointer(leaf.depth, leaf.is_last);
-    let suffix = tree_suffix.map_or_else(String::new, TreeSuffix::get_suffix_str);
-    let current_line = format!("{}{}{}{}", prefix_stack.concat(), pointer, leaf.key, suffix);
+    let (pointer, new_prefix) = DirTreeLimbs::get_pointer_and_prefix(leaf.depth, leaf.is_last);
+    let current_line = format!(
+        "{}{}{}{}",
+        prefix_stack.concat(),
+        pointer,
+        leaf.key.display_key(),
+        tree_suffix
+    );
 
-    let new_prefix = DirTreeLimbs::get_prefix(leaf.depth, leaf.is_last);
     prefix_stack.push(new_prefix);
 
     current_line + "\n" // Added newline here for consistency
 }
 
-fn update_directory_tree(mut dir_tree: String, current_line: String) -> String {
-    dir_tree += &current_line; // Append the current line to the directory tree string
-    dir_tree // Return the updated directory tree
-}
-
-fn process_folder_tree_stack(stack: FileSystemStack) -> String {
+pub fn process_folder_tree_stack(stack: FileSystemStack, print_options: &DirTreeOptions) -> String {
     let mut dir_tree = String::new();
     let mut prefix_stack: Vec<&str> = Vec::new();
 
     for leaf in stack {
-        let leaf = get_single_tree_leaf(leaf, &mut prefix_stack, None);
-        dir_tree = update_directory_tree(dir_tree, leaf);
+        if print_options.skip_leaf(&leaf.key.as_path()) {
+            continue;
+        }
+        let suffix = print_options.get_tree_suffix_str();
+        let leaf = get_single_tree_leaf(leaf, &mut prefix_stack, suffix);
+        dir_tree += &leaf;
     }
 
     dir_tree
 }
-
-pub fn create_dir_tree_from_folder_metadata_hashmap(
-    root_folder_path: String,
-    folder_hash_map: &HashMap<String, Folder>,
-    options: &DirTreeOptions,
-) -> String {
-    // Uses DFS to crawl our tree
-    let mut directory_tree = String::new();
-    let mut prefix_stack: Vec<&str> = Vec::new();
-    let mut dir_tree_stack: FileSystemStackWithPath = VecDeque::new();
-
-    let root_leaf = DirTreeLeaf::new_root(root_folder_path);
-
-    // TODO: Remove this string for files -> Make this an optional
-    dir_tree_stack.push_front(("".to_owned(), root_leaf));
-
-    while let Some((path, current_leaf)) = dir_tree_stack.pop_front() {
-        // Avoids extra "/" and invalid paths on other systems -> "\" vs "/"
-        let map_path = join_path_conditionally(&path, &current_leaf.key);
-
-        if let Some(folder) = folder_hash_map.get(&map_path) {
-            add_subfolders_to_directory_tree_stack(
-                map_path,
-                folder,
-                &current_leaf,
-                &mut dir_tree_stack,
-            );
-            // if options.display_files {
-            //     add_files_to_directory_tree_stack(folder, &current_leaf, &mut dir_tree_stack);
-            // }
-            let tree_suffix = options.generate_tree_suffix(&folder.metadata);
-            let leaf = get_single_tree_leaf(current_leaf, &mut prefix_stack, tree_suffix);
-            directory_tree = update_directory_tree(directory_tree, leaf);
-        }
-    }
-
-    directory_tree
-}
-
-fn add_subfolders_to_directory_tree_stack(
-    folder_path: String,
-    folder_data: &Folder,
-    current_leaf: &DirTreeLeaf,
-    dir_tree_stack: &mut FileSystemStackWithPath,
-) {
-    folder_data
-        .metadata
-        .subfolders
-        .iter()
-        .rev()
-        .enumerate()
-        .for_each(|(index, subfolder_path)| {
-            let leaf = DirTreeLeaf {
-                key: subfolder_path.clone(),
-                depth: current_leaf.depth + 1,
-                is_last: index == 0,
-            };
-            dir_tree_stack.push_front((folder_path.clone(), leaf));
-        });
-}
-
-// fn add_files_to_directory_tree_stack(
-//     folder_data: Folder,
-//     current_leaf: &DirTreeLeaf,
-//     dir_tree_stack: &mut FileSystemStackWithPath,
-// ) {
-//     // For now, sort by size
-//     folder_data.metadata.sort_files(SortKey::Size);
-
-//     folder_data.metadata.files.iter().for_each(|file| {
-//         let leaf = DirTreeLeaf {
-//             key: file.file_name.clone(),
-//             depth: current_leaf.depth + 1,
-//             is_last: true,
-//         };
-//         dir_tree_stack.push_front(("".to_owned(), leaf));
-//     });
-// }
 
 #[cfg(test)]
 mod tests {
@@ -178,13 +109,14 @@ mod tests {
         let mut stack: FileSystemStack = VecDeque::new();
         for (key, depth, is_last) in folder_leaves {
             stack.push_back(DirTreeLeaf {
-                key: key.to_owned(),
+                key: TreeKey::StringKey(key.to_string()),
                 depth,
                 is_last,
             });
         }
 
-        let directory_tree = process_folder_tree_stack(stack); // Ensure this function returns a String
+        let options = DirTreeOptions::default();
+        let directory_tree = process_folder_tree_stack(stack, &options); // Ensure this function returns a String
 
         let expected_output = "\
 main_folder
