@@ -1,6 +1,7 @@
 use serde::{self, Deserialize, Deserializer};
 use serde_derive::Deserialize;
 use std::collections::HashMap;
+use std::fs::canonicalize;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -77,43 +78,60 @@ where
     }
 }
 
+fn default_display_unit() -> DataSizeUnit {
+    DataSizeUnit::MB
+}
+
 // Config struct holds to data from the `[config]` section.
 #[derive(Deserialize, Debug)]
 pub struct Config {
-    pub size: Option<SizeConfig>,
     // The user needn't setup any subgroups if they don't wish to
     #[serde(flatten)]
     pub subgroups: Option<PathConfigMap>,
 }
 
-impl Default for SizeConfig {
-    // size is optional, so implement the Default trait to provide a default value
-    // if the user doesn't provide one.
-    fn default() -> Self {
-        SizeConfig {
-            display: DataSizeUnit::MB, // Default to Megabytes
-            ignore_extensions: false,
-            walk: false,
-            skip_hidden: false,
-        }
-    }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(default)]
-pub struct SizeConfig {
-    // All values are optional. If size is provided,
-    // defaults will be automatically set.
-    #[serde(deserialize_with = "deserialise_data_size_unit")]
-    pub display: DataSizeUnit,
-    pub ignore_extensions: bool,
-    pub walk: bool,
-    pub skip_hidden: bool,
-}
-
 #[derive(Deserialize, Debug)]
 pub struct PathConfig {
     pub directory: PathBuf,
+    // Skip serialising if a PathConfig needs to be generated
+    // on the fly.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub extensions_to_delete: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub extensions_to_keep: Option<Vec<String>>,
+    #[serde(default)]
+    pub recursive: bool,
+    #[serde(default)]
+    pub delete_hidden: bool,
+    // All values are optional. If size is provided,
+    // defaults will be automatically set.
+    #[serde(
+        default = "default_display_unit",
+        deserialize_with = "deserialise_data_size_unit"
+    )]
+    pub display_units: DataSizeUnit,
+}
+
+impl PathConfig {
+    // Simplified constructor for manual instantiation with just the directory
+    pub fn new(directory: PathBuf, use_relative_path: bool) -> Self {
+        // Use absolute path by default
+        let directory_path = if use_relative_path {
+            directory
+        } else {
+            match canonicalize(&directory) {
+                Ok(path) => path,
+                Err(err) => panic!("Failed to canonicalize directory: {}", err),
+            }
+        };
+
+        PathConfig {
+            directory: directory_path,
+            extensions_to_delete: None,      // Default to None
+            extensions_to_keep: None,        // Default to None
+            recursive: false,                // Default to false
+            delete_hidden: false,            // Default to false
+            display_units: DataSizeUnit::MB, // Use the default_display function to get the default
+        }
+    }
 }

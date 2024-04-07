@@ -1,20 +1,18 @@
-use super::config::{Config, PathConfigMap, SizeConfig};
-use super::config_error::ConfigError;
+use super::config::{Config, PathConfigMap};
+use super::errors::ConfigError;
 
 use std::fs;
 use std::path::PathBuf;
 use toml;
 use toml::de::Error;
 
-type ConfigsUnpacked = (SizeConfig, Option<PathConfigMap>);
-
 fn read_config_file(config_file_path: &PathBuf) -> Result<String, ConfigError> {
     fs::read_to_string(config_file_path).map_err(|_| ConfigError::read_error(config_file_path))
 }
 
-fn parse_config_from_str(file_content: &str) -> Result<ConfigsUnpacked, Error> {
+fn parse_config_from_str(file_content: &str) -> Result<Option<PathConfigMap>, Error> {
     let config: Config = toml::from_str(file_content)?;
-    Ok((config.size.unwrap_or_default(), config.subgroups))
+    Ok(config.subgroups)
 }
 
 /// Extracts the user configuration from a specified configuration file.
@@ -42,7 +40,7 @@ fn parse_config_from_str(file_content: &str) -> Result<ConfigsUnpacked, Error> {
 /// ```
 pub fn extract_user_config_from_path(
     config_file_path: &PathBuf,
-) -> Result<ConfigsUnpacked, ConfigError> {
+) -> Result<Option<PathConfigMap>, ConfigError> {
     let file_content = read_config_file(&config_file_path)
         .map_err(|_| ConfigError::read_error(&config_file_path))?;
 
@@ -89,8 +87,7 @@ mod tests {
             extensions_to_keep = ["xlsx", "pptx"]
         "#;
 
-        let (_, subgroups) = parse_config_from_str(toml_str).unwrap();
-        let subgroups = subgroups.unwrap();
+        let subgroups = parse_config_from_str(toml_str).unwrap().unwrap();
         assert_eq!(subgroups.len(), 2);
 
         // Check the downloads group
@@ -133,7 +130,7 @@ mod tests {
             directory = "/example/images"
         "#;
 
-        let (_, subgroups) = parse_config_from_str(toml_str).unwrap();
+        let subgroups = parse_config_from_str(toml_str).unwrap();
 
         // Ensure that subgroups is not None and contains "images"
         assert!(subgroups.is_some(), "Subgroups should be Some");

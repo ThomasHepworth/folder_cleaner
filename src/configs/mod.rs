@@ -1,9 +1,10 @@
 pub mod config;
-pub mod config_error;
-pub mod parsing;
+pub mod errors;
+mod parsing;
+pub mod unwrap_config_groups;
 
-use config_error::ConfigError;
 use directories::UserDirs;
+use errors::ConfigError;
 use std::path::PathBuf;
 
 pub const CONFIG_FILE_NAME: &str = ".nuke.toml";
@@ -40,7 +41,11 @@ pub fn get_user_config_path(config_filename: &str) -> Result<PathBuf, ConfigErro
 
 pub fn report_user_config_path(config_filename: &str) {
     match get_user_config_path(config_filename) {
-        Ok(path) => println!("User config path: {:?}", path),
-        Err(e) => eprintln!("Error: {}", e),
+        Ok(path) => println!(
+            "The path to your current configuration file is: {:?}. \
+            You can edit this file to customize your cleaning preferences.",
+            path
+        ),
+        Err(e) => eprintln!("Unable to locate the configuration file. Error: {}", e),
     }
 }
