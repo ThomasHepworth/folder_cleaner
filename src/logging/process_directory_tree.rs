@@ -1,4 +1,4 @@
-use super::folder_tree_helpers::{DirTreeLeaf, DirTreeOptions};
+use super::folder_tree_helpers::{DirTreeLeaf, DirTreeOptions, TreeKey};
 use std::collections::VecDeque;
 
 pub type FileSystemStack = VecDeque<DirTreeLeaf>;
@@ -80,7 +80,7 @@ pub fn process_folder_tree_stack(stack: FileSystemStack, print_options: &DirTree
 
 #[cfg(test)]
 mod tests {
-    use super::*; // Adjust based on your module structure
+    use super::*;
     use std::collections::VecDeque;
 
     #[test]
