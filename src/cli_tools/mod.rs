@@ -3,7 +3,7 @@ mod errors;
 mod subprompts;
 mod validation;
 
-use crate::cleaning::process_config;
+use crate::cleaning::track_files_for_deletion_in_given_config;
 use crate::configs::config::PathConfig;
 use crate::configs::get_user_config_path;
 use crate::configs::unwrap_config_groups::fetch_cli_configs;
@@ -64,7 +64,7 @@ fn get_and_update_path_config(args: &DirectoryArgs) -> Result<Vec<PathConfig>, C
 // TODO: Handle dir_tree requested => print_directory_tree
 fn scan_folders(configs: Vec<PathConfig>, overview_type: TextOverviewType) {
     for config in configs.iter() {
-        match process_config(config, &overview_type) {
+        match track_files_for_deletion_in_given_config(config, &overview_type) {
             Ok((text_summary, file_folder_queue)) => {
                 println!("{}", text_summary);
                 match overview_type {

@@ -2,6 +2,7 @@ use inquire::{InquireError, Select};
 use std::fmt;
 use std::process;
 
+use crate::cleaning::delete_files_scheduled_for_deletion;
 use crate::logging::process_directory_tree::FileSystemStack;
 use crate::logging::{print_directory_tree, TextOverviewType};
 
@@ -29,15 +30,21 @@ impl PromptArg {
     pub fn process_command(&self, directory_stack: FileSystemStack) {
         match self {
             PromptArg::Delete => {
-                println!("Data Cleaning️");
-                println!("Pretending it's now deleted 😅")
+                match delete_files_scheduled_for_deletion(directory_stack) {
+                    Ok(_) => {
+                        println!("All files were successfully deleted.");
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                    }
+                }
+                process::exit(0);
             }
             PromptArg::Exit => {
                 println!("Exiting the program");
                 process::exit(0);
             }
             PromptArg::Tree => {
-                println!("Printing Directory Tree");
                 print_directory_tree(directory_stack);
             }
         }

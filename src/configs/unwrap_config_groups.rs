@@ -47,24 +47,7 @@ mod tests {
     use super::*;
     use std::fs::File;
     use std::io::Write;
-    use std::path::PathBuf;
     use tempfile::tempdir;
-
-    fn create_temp_toml_file_and_map<F, T>(contents: &str, action: F) -> (T)
-    where
-        F: FnOnce(PathBuf) -> T,
-    {
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("test_config.toml");
-
-        let mut file = File::create(&file_path)
-            .unwrap_or_else(|e| panic!("Failed to create temporary file: {}", e));
-
-        writeln!(file, "{}", contents)
-            .unwrap_or_else(|_| panic!("Failed to write to temporary file"));
-
-        action(file_path.clone())
-    }
 
     fn test_config_fetch_helper(
         filter_group: Option<&str>,
@@ -73,11 +56,11 @@ mod tests {
         let dummy_contents = r#"
         [[core]]
         directory = "/Users/example/random"
-        extensions_to_del = ["xlsx"]
+        extensions_to_delete = ["xlsx"]
 
         [[downloads]]
         directory = "/Users/example/Downloads"
-        extensions_to_del = ["xlsx", ".rs"]
+        extensions_to_delete = ["xlsx", ".rs"]
         "#;
 
         let temp_dir = tempdir().unwrap();

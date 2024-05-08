@@ -1,6 +1,6 @@
 use super::mark_for_deletion::should_delete_file;
 use crate::configs::config::PathConfig;
-use crate::logging::folder_tree_helpers::{DirTreeLeaf, TreeKey};
+use crate::logging::folder_tree_helpers::DirTreeLeaf;
 use crate::utils::check_root_folder_exists;
 use std::collections::VecDeque;
 use std::fs::{self, metadata};
@@ -51,18 +51,16 @@ fn find_deletion_targets(config: &PathConfig) -> IoResult<(TreeQueue, DeletionMe
     let mut processed_leaves: TreeQueue = VecDeque::new();
 
     // Add the root folder to the queue
-    let root_leaf = DirTreeLeaf::new_root_path(config.directory.clone());
+    let root_leaf = DirTreeLeaf::new_root(config.directory.clone());
     queue.push_front(root_leaf);
 
     while let Some(leaf) = queue.pop_front() {
-        if leaf.is_file() {
+        if leaf.key.is_file() {
             processed_leaves.push_back(leaf);
             continue;
         }
 
-        let folder_path = leaf.key.as_path();
-
-        match scan_folder_contents(&folder_path, config, &mut deletion_metadata) {
+        match scan_folder_contents(&leaf.key, config, &mut deletion_metadata) {
             Ok(directory_contents) => {
                 let folder_leaves =
                     create_tree_leaves_from_paths(directory_contents, leaf.depth + 1);
@@ -131,9 +129,9 @@ fn create_tree_leaves_from_paths(paths: PathVec, depth: usize) -> TreeQueue {
     let mut path_leaves: TreeQueue = VecDeque::new();
     let paths_len = paths.len();
 
-    for (index, paths) in paths.into_iter().enumerate() {
+    for (index, path) in paths.into_iter().enumerate() {
         let file_leaf = DirTreeLeaf {
-            key: TreeKey::PathKey(paths),
+            key: path,
             depth,
             is_last: index == paths_len - 1,
         };
