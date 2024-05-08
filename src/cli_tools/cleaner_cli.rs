@@ -15,8 +15,8 @@ pub struct CLI {
 }
 
 #[derive(Parser)]
-pub struct CleanArgs {
-    /// The path to clean or a configuration key to use.
+pub struct DirectoryArgs {
+    /// The path or configuration key to use.
     #[arg(required = true)]
     pub path_or_config_key: String,
 
@@ -28,13 +28,9 @@ pub struct CleanArgs {
     #[arg(short, default_value_t = false)]
     pub recursive: bool,
 
-    /// Whether to delete hidden files and folders
+    /// Whether to include hidden files and folders.
     #[arg(short, default_value_t = false)]
-    pub delete_hidden: bool,
-
-    /// Automatically approve the deletion request
-    #[arg(short)]
-    pub yes: bool,
+    pub include_hidden: bool,
 
     /// Determines the path display format. If true, the path will be relative to the current directory.
     #[arg(long, aliases = ["relative", "relativepath"])]
@@ -46,10 +42,30 @@ pub struct CleanArgs {
     pub size: Option<DataSizeUnit>,
 }
 
+#[derive(Parser)]
+pub struct CleanArgs {
+    #[clap(flatten)]
+    pub directory_args: DirectoryArgs,
+
+    /// Automatically approve the deletion request.
+    #[arg(short)]
+    pub yes: bool,
+}
+
+#[derive(Parser)]
+pub struct SizeArgs {
+    #[clap(flatten)]
+    pub directory_args: DirectoryArgs,
+}
+
 #[derive(Subcommand)]
 pub enum Commands {
     /// Clean a directory based on a path or configuration key.
     Clean(CleanArgs),
+
+    /// Show the size of a directory based on a path or configuration key.
+    Size(SizeArgs),
+
     /// Display the path to your configuration file.
     ConfigPath,
 }

@@ -4,8 +4,8 @@ mod configs;
 mod logging;
 mod utils;
 
-use cli_tools::run_clean_up;
+use cli_tools::run_cli;
 
 fn main() {
-    run_clean_up();
+    run_cli();
 }
