@@ -4,7 +4,6 @@ use crate::{
     cleaning::track_files_for_deletion::DeletionMetaData,
     configs::config::{DataSizeUnit, PathConfig},
 };
-
 use chrono::{DateTime, Local};
 
 const DASHED_LINE: &str = "---------------------------------------------------------";
@@ -21,13 +20,19 @@ fn deletion_overview_text() -> Vec<String> {
         .collect()
 }
 
-fn prompt_deletion_confirmation() -> Vec<String> {
+fn folder_size_overview_text() -> Vec<String> {
+    [LINE, "📁 Folder Size Overview 📁", DASHED_LINE]
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+fn deletion_warning() -> Vec<String> {
     [
         DASHED_LINE,
         &bold("🚨 WARNING: This action is irreversible 🚨"),
         "🛑 Ensure you've backed up any important data before proceeding.",
         "🔍 Review the information carefully before proceeding.",
-        "👉 Type 'Y' to proceed, 'n' to cancel, or 't' to view dir tree",
         LINE,
     ]
     .iter()
@@ -55,6 +60,19 @@ fn format_deletion_size(deletion_metadata: &DeletionMetaData, unit: &DataSizeUni
     format!(
         "{}: {} - {}",
         bold("Data scheduled for deletion"),
+        file_directory_count_text,
+        bold(&unit.display_total_size(deletion_metadata.deletion_size)),
+    )
+}
+
+fn format_file_folder_counts(deletion_metadata: &DeletionMetaData, unit: &DataSizeUnit) -> String {
+    let file_directory_count_text = format!(
+        "{} files, {} directories",
+        deletion_metadata.file_count, deletion_metadata.dir_count
+    );
+    format!(
+        "{}: {} - {}",
+        bold("Total Size of files and directories"),
         file_directory_count_text,
         bold(&unit.display_total_size(deletion_metadata.deletion_size)),
     )
@@ -106,9 +124,27 @@ pub fn generate_deletion_overview_text(
     deletion_overview.push(format_deletion_size(&deletion_metadata, unit));
     deletion_overview.push(format_last_modified(deletion_metadata.last_modified_time));
     deletion_overview.extend(format_extensions(config));
-    // Generate prompt for deletion confirmation
-    deletion_overview.extend(prompt_deletion_confirmation());
+    // Generate warning before asking for deletion confirmation
+    deletion_overview.extend(deletion_warning());
 
     // Return w/ newline separated strings
     deletion_overview.join("\n")
+}
+
+pub fn generate_size_overview_text(
+    config: &PathConfig, // Assume this is the correct reference to PathConfig
+    metadata: DeletionMetaData,
+    unit: &DataSizeUnit,
+) -> String {
+    let mut size_overview: Vec<String> = vec![];
+    size_overview.extend(folder_size_overview_text());
+
+    // Log folder metadata
+    size_overview.push(format_folder_path(config));
+    size_overview.push(format_file_folder_counts(&metadata, unit));
+    size_overview.push(format_last_modified(metadata.last_modified_time));
+    size_overview.extend(format_extensions(config));
+
+    // Return w/ newline separated strings
+    size_overview.join("\n")
 }
