@@ -1,9 +1,7 @@
 use std::time::SystemTime;
 
-use crate::{
-    cleaning::track_files_for_deletion::DeletionMetaData,
-    configs::config::{DataSizeUnit, PathConfig},
-};
+use crate::utils::format_size;
+use crate::{cleaning::track_files_for_deletion::DeletionMetaData, configs::config::PathConfig};
 use chrono::{DateTime, Local};
 
 const DASHED_LINE: &str = "---------------------------------------------------------";
@@ -44,15 +42,11 @@ fn format_folder_path(config: &PathConfig) -> String {
     format!("{}: {:?}", bold("Folder path"), config.directory.display())
 }
 
-fn format_total_size(total_size: u64, unit: &DataSizeUnit) -> String {
-    format!(
-        "{}: {}",
-        bold("Total folder size"),
-        unit.display_total_size(total_size)
-    )
+fn format_total_size(total_size: u64) -> String {
+    format!("{}: {}", bold("Total folder size"), format_size(total_size))
 }
 
-fn format_deletion_size(deletion_metadata: &DeletionMetaData, unit: &DataSizeUnit) -> String {
+fn format_deletion_size(deletion_metadata: &DeletionMetaData) -> String {
     let file_directory_count_text = format!(
         "{} files, {} directories",
         deletion_metadata.file_count, deletion_metadata.dir_count
@@ -61,20 +55,20 @@ fn format_deletion_size(deletion_metadata: &DeletionMetaData, unit: &DataSizeUni
         "{}: {} - {}",
         bold("Data scheduled for deletion"),
         file_directory_count_text,
-        bold(&unit.display_total_size(deletion_metadata.deletion_size)),
+        bold(&format_size(deletion_metadata.deletion_size)),
     )
 }
 
-fn format_file_folder_counts(deletion_metadata: &DeletionMetaData, unit: &DataSizeUnit) -> String {
+fn format_file_folder_counts(deletion_metadata: &DeletionMetaData) -> String {
     let file_directory_count_text = format!(
         "{} files, {} directories",
         deletion_metadata.file_count, deletion_metadata.dir_count
     );
     format!(
         "{}: {} - {}",
-        bold("Total Size of files and directories"),
+        bold("Total size of files and directories"),
         file_directory_count_text,
-        bold(&unit.display_total_size(deletion_metadata.deletion_size)),
+        bold(&format_size(deletion_metadata.deletion_size)),
     )
 }
 
@@ -113,15 +107,14 @@ fn format_extensions(config: &PathConfig) -> Vec<String> {
 pub fn generate_deletion_overview_text(
     config: &PathConfig, // Assume this is the correct reference to PathConfig
     deletion_metadata: DeletionMetaData,
-    unit: &DataSizeUnit,
 ) -> String {
     let mut deletion_overview: Vec<String> = vec![];
     deletion_overview.extend(deletion_overview_text());
 
     // Log folder metadata
     deletion_overview.push(format_folder_path(config));
-    deletion_overview.push(format_total_size(deletion_metadata.folder_size, unit));
-    deletion_overview.push(format_deletion_size(&deletion_metadata, unit));
+    deletion_overview.push(format_total_size(deletion_metadata.folder_size));
+    deletion_overview.push(format_deletion_size(&deletion_metadata));
     deletion_overview.push(format_last_modified(deletion_metadata.last_modified_time));
     deletion_overview.extend(format_extensions(config));
     // Generate warning before asking for deletion confirmation
@@ -134,14 +127,13 @@ pub fn generate_deletion_overview_text(
 pub fn generate_size_overview_text(
     config: &PathConfig, // Assume this is the correct reference to PathConfig
     metadata: DeletionMetaData,
-    unit: &DataSizeUnit,
 ) -> String {
     let mut size_overview: Vec<String> = vec![];
     size_overview.extend(folder_size_overview_text());
 
     // Log folder metadata
     size_overview.push(format_folder_path(config));
-    size_overview.push(format_file_folder_counts(&metadata, unit));
+    size_overview.push(format_file_folder_counts(&metadata));
     size_overview.push(format_last_modified(metadata.last_modified_time));
     size_overview.extend(format_extensions(config));
 

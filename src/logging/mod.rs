@@ -2,10 +2,7 @@ mod deletion_overview;
 pub mod folder_tree_helpers;
 pub mod process_directory_tree;
 
-use crate::{
-    cleaning::track_files_for_deletion::DeletionMetaData,
-    configs::config::{DataSizeUnit, PathConfig},
-};
+use crate::{cleaning::track_files_for_deletion::DeletionMetaData, configs::config::PathConfig};
 use deletion_overview::{generate_deletion_overview_text, generate_size_overview_text};
 use folder_tree_helpers::DirTreeOptions;
 use process_directory_tree::{process_folder_tree_stack, FileSystemStack};
@@ -20,13 +17,12 @@ impl TextOverviewType {
         &self,
         config: &PathConfig,
         deletion_metadata: DeletionMetaData,
-        unit: &DataSizeUnit,
     ) -> String {
         match self {
             TextOverviewType::Deletion => {
-                generate_deletion_overview_text(config, deletion_metadata, unit)
+                generate_deletion_overview_text(config, deletion_metadata)
             }
-            TextOverviewType::Size => generate_size_overview_text(config, deletion_metadata, unit),
+            TextOverviewType::Size => generate_size_overview_text(config, deletion_metadata),
         }
     }
 }
