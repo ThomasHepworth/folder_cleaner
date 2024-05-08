@@ -3,60 +3,8 @@ use serde_derive::Deserialize;
 use std::collections::HashMap;
 use std::fs::canonicalize;
 use std::path::PathBuf;
-use std::str::FromStr;
 
 pub type PathConfigMap = HashMap<String, Vec<PathConfig>>;
-
-#[derive(Deserialize, Debug, Clone)]
-pub enum DataSizeUnit {
-    Bytes,
-    KB, // Kilobytes
-    MB, // Megabytes
-    GB, // Gigabytes
-    TB, // Terabytes
-}
-
-impl FromStr for DataSizeUnit {
-    type Err = String;
-
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        match input.to_uppercase().as_str() {
-            "BYTES" => Ok(DataSizeUnit::Bytes),
-            "KB" => Ok(DataSizeUnit::KB),
-            "MB" => Ok(DataSizeUnit::MB),
-            "GB" => Ok(DataSizeUnit::GB),
-            "TB" => Ok(DataSizeUnit::TB),
-            _ => panic!(
-                "Invalid display unit: '{}'. Valid units are: bytes, KB, MB, GB, TB.",
-                input
-            ),
-        }
-    }
-}
-
-impl DataSizeUnit {
-    pub fn display_total_size(&self, bytes: u64) -> String {
-        match self {
-            DataSizeUnit::Bytes => format!("{} bytes", bytes),
-            DataSizeUnit::KB => format!("{:.2} KB", bytes as f64 / 1024.0),
-            DataSizeUnit::MB => format!("{:.2} MB", bytes as f64 / (1024.0 * 1024.0)),
-            DataSizeUnit::GB => format!("{:.2} GB", bytes as f64 / (1024.0 * 1024.0 * 1024.0)),
-            DataSizeUnit::TB => format!(
-                "{:.2} TB",
-                bytes as f64 / (1024.0 * 1024.0 * 1024.0 * 1024.0)
-            ),
-        }
-    }
-}
-
-fn deserialise_data_size_unit<'de, D>(deserializer: D) -> Result<DataSizeUnit, D::Error>
-// TODO: Migrate to deserialise
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    s.parse().map_err(serde::de::Error::custom)
-}
 
 // TODO: Improve deserialisation of extensions
 // Test - extensions_to_del = ["tmp", ".log", "..rs"]
@@ -76,10 +24,6 @@ where
             Ok(Some(cleaned_vec))
         }
     }
-}
-
-fn default_display_unit() -> DataSizeUnit {
-    DataSizeUnit::MB
 }
 
 // Config struct holds to data from the `[config]` section.
@@ -103,13 +47,6 @@ pub struct PathConfig {
     pub recursive: bool,
     #[serde(default)]
     pub delete_hidden: bool,
-    // All values are optional. If size is provided,
-    // defaults will be automatically set.
-    #[serde(
-        default = "default_display_unit",
-        deserialize_with = "deserialise_data_size_unit"
-    )]
-    pub display_units: DataSizeUnit,
 }
 
 impl PathConfig {
@@ -127,11 +64,10 @@ impl PathConfig {
 
         PathConfig {
             directory: directory_path,
-            extensions_to_delete: None,      // Default to None
-            extensions_to_keep: None,        // Default to None
-            recursive: false,                // Default to false
-            delete_hidden: false,            // Default to false
-            display_units: DataSizeUnit::MB, // Use the default_display function to get the default
+            extensions_to_delete: None, // Default to None
+            extensions_to_keep: None,   // Default to None
+            recursive: false,           // Default to false
+            delete_hidden: false,       // Default to false
         }
     }
 }

@@ -112,10 +112,6 @@ fn update_configs_with_cli_args(
             config.recursive = cleaner_args.recursive;
             config.delete_hidden = cleaner_args.include_hidden;
 
-            if let Some(size) = &cleaner_args.size {
-                config.display_units = size.clone();
-            }
-
             config
         })
         .collect()

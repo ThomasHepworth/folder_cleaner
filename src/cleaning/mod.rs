@@ -27,11 +27,7 @@ pub fn track_files_for_deletion_in_given_config(
 
     match tracked_files {
         Ok((file_folder_queue, file_folder_metadata)) => {
-            let text_overview = deletion_overview.generate_text(
-                config,
-                file_folder_metadata,
-                &config.display_units,
-            );
+            let text_overview = deletion_overview.generate_text(config, file_folder_metadata);
             return Ok((text_overview, file_folder_queue));
         }
         Err(e) => {
