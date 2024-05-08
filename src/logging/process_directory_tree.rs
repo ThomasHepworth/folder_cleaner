@@ -1,5 +1,4 @@
-// TODO: Fix TreeKey import
-use super::folder_tree_helpers::{DirTreeLeaf, DirTreeOptions, TreeKey};
+use super::folder_tree_helpers::{DirTreeLeaf, DirTreeOptions};
 use std::collections::VecDeque;
 
 pub type FileSystemStack = VecDeque<DirTreeLeaf>;
@@ -22,7 +21,6 @@ impl DirTreeLimbs {
         }
     }
 
-    // Now an associated function (static method)
     fn get_prefix(depth: usize, is_last: bool) -> &'static str {
         match (depth, is_last) {
             (0, _) => "",
@@ -54,7 +52,7 @@ fn get_single_tree_leaf(
         "{}{}{}{}",
         prefix_stack.concat(),
         pointer,
-        leaf.key.display_key(),
+        leaf,
         tree_suffix
     );
 
@@ -68,7 +66,7 @@ pub fn process_folder_tree_stack(stack: FileSystemStack, print_options: &DirTree
     let mut prefix_stack: Vec<&str> = Vec::new();
 
     for leaf in stack {
-        if print_options.skip_leaf(&leaf.key.as_path()) {
+        if print_options.should_skip_file_leaf(&leaf.key) {
             continue;
         }
         let suffix = print_options.get_tree_suffix_str();
@@ -82,7 +80,7 @@ pub fn process_folder_tree_stack(stack: FileSystemStack, print_options: &DirTree
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::VecDeque;
+    use std::{collections::VecDeque, path::PathBuf};
 
     #[test]
     fn test_process_folder_tree_stack() {
@@ -109,7 +107,7 @@ mod tests {
         let mut stack: FileSystemStack = VecDeque::new();
         for (key, depth, is_last) in folder_leaves {
             stack.push_back(DirTreeLeaf {
-                key: TreeKey::StringKey(key.to_string()),
+                key: PathBuf::from(key),
                 depth,
                 is_last,
             });
@@ -119,7 +117,7 @@ mod tests {
         let directory_tree = process_folder_tree_stack(stack, &options); // Ensure this function returns a String
 
         let expected_output = "\
-main_folder
+.main_folder
 ├── file01.txt
 ├── file02.txt
 ├── folder_sub1

@@ -77,7 +77,7 @@ mod tests {
         let toml_str = r#"
             [[downloads]]
             directory = "/example/downloads"
-            extensions_to_del = ["tmp", "log", "rs"]
+            extensions_to_delete = ["tmp", "log", "rs"]
 
             [[documents]]
             directory = "/example/documents"
