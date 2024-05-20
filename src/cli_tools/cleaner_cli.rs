@@ -27,9 +27,9 @@ pub struct DirectoryArgs {
     #[arg(short, default_value_t = false)]
     pub include_hidden: bool,
 
-    /// Determines the path display format. If true, the path will be relative to the current directory.
-    #[arg(long, aliases = ["relative", "relativepath"])]
-    pub relative_path: bool,
+    /// If true, all paths will be displayed as full paths.
+    #[arg(long, aliases = ["full", "fullpath"])]
+    pub full_path: bool,
 }
 
 #[derive(Parser)]
