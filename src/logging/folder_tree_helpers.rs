@@ -129,7 +129,7 @@ mod tests {
 
         assert_eq!(
             options.get_tree_suffix_str(),
-            format!(" - \x1b[1m{}\x1b[0m", "1.00 MB")
+            format!(" - \x1b[1m{}\x1b[0m", "1.00 KB")
         );
     }
 }
