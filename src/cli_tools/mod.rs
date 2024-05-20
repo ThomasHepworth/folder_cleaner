@@ -54,7 +54,7 @@ fn handle_size_args(args: &SizeArgs) -> Result<(Vec<PathConfig>, TextOverviewTyp
 }
 
 fn get_and_update_path_config(args: &DirectoryArgs) -> Result<Vec<PathConfig>, CLIError> {
-    let configs = get_path_config_from_key(&args.path_or_config_key, args.relative_path)?;
+    let configs = get_path_config_from_key(&args.path_or_config_key, args.full_path)?;
     let updated_configs = update_configs_with_cli_args(configs, &args);
 
     Ok(updated_configs)
